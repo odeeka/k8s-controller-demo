@@ -17,6 +17,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	learnv1 "github.com/example/k8s-controller-demo/01-minimal-controller/api/v1"
 	"github.com/example/k8s-controller-demo/01-minimal-controller/internal/controller"
@@ -48,6 +49,10 @@ func main() {
 	// It calls os.Exit(1) if neither is available.
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
+		// Disable metrics and health probe servers — they bind to ports that
+		// conflict if you run multiple steps at once. Not needed for learning.
+		Metrics:                metricsserver.Options{BindAddress: "0"},
+		HealthProbeBindAddress: "0",
 	})
 	if err != nil {
 		ctrl.Log.Error(err, "unable to start manager")

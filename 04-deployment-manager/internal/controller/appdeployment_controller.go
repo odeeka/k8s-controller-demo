@@ -32,30 +32,55 @@ func (r *AppDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	log.Info("Reconciling AppDeployment", "image", app.Spec.Image, "replicas", app.Spec.Replicas)
 
-	// ── 2. Build the desired Deployment ────────────────────────────────────
-	// We define the full desired state of the Deployment here.
-	// The Deployment name matches the AppDeployment name for simplicity.
-	deploy := r.buildDeployment(&app)
-
-	// ── 3. Set owner reference ─────────────────────────────────────────────
-	// This links `deploy` to `app`. When `app` is deleted, Kubernetes will
-	// automatically garbage-collect `deploy`.
-	//
-	// SetControllerReference also sets controller=true, which means only ONE
-	// controller can own a resource (prevents conflicts).
-	if err := controllerutil.SetControllerReference(&app, deploy, r.Scheme); err != nil {
-		return ctrl.Result{}, err
+	// ── 2. Prepare the Deployment shell ───────────────────────────────────
+	// We only set Name + Namespace here — this is the "lookup key" that
+	// CreateOrUpdate uses to GET the existing Deployment (or create a new one).
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      app.Name,
+			Namespace: app.Namespace,
+		},
 	}
 
-	// ── 4. CreateOrUpdate the Deployment ───────────────────────────────────
-	// We use CreateOrUpdate so the operation is idempotent. The mutate func
-	// applies the desired image/replicas to whatever currently exists.
+	// ── 3. CreateOrUpdate the Deployment ───────────────────────────────────
+	// IMPORTANT: All desired-state mutations go INSIDE the mutate function.
+	//
+	// Why? CreateOrUpdate works in two steps:
+	//   1. GET the existing object from the API (or start with the shell above)
+	//   2. Call this function so you can set desired fields on it
+	//   3. Create or Update the result
+	//
+	// If you set fields *before* CreateOrUpdate, those values are overwritten
+	// by the GET in step 1 — so your changes are lost on the update path.
+	// This includes owner references, labels, and spec fields.
 	result, err := controllerutil.CreateOrUpdate(ctx, r.Client, deploy, func() error {
-		// Apply desired spec fields. We do a targeted update rather than
-		// replacing the whole spec, to preserve fields the Deployment
-		// controller may have added (e.g. defaulted fields).
-		deploy.Spec.Replicas = &app.Spec.Replicas
-		deploy.Spec.Template.Spec.Containers[0].Image = app.Spec.Image
+		// ── Owner reference ──────────────────────────────────────────────
+		// Links `deploy` to `app`. When `app` is deleted, Kubernetes will
+		// automatically garbage-collect `deploy`.
+		// Must be set inside the mutate func so it survives the update path.
+		if err := controllerutil.SetControllerReference(&app, deploy, r.Scheme); err != nil {
+			return err
+		}
+
+		// ── Desired spec ──────────────────────────────────────────────────
+		replicas := app.Spec.Replicas
+		labels := map[string]string{
+			"app":                          app.Name,
+			"app.kubernetes.io/managed-by": "appdeployment-controller",
+		}
+
+		deploy.Spec.Replicas = &replicas
+		deploy.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
+		deploy.Spec.Template = corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{Labels: labels},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{{
+					Name:  app.Name,
+					Image: app.Spec.Image,
+					Ports: []corev1.ContainerPort{{ContainerPort: app.Spec.Port}},
+				}},
+			},
+		}
 		return nil
 	})
 	if err != nil {
@@ -89,46 +114,6 @@ func (r *AppDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		"availableReplicas", app.Status.AvailableReplicas,
 	)
 	return ctrl.Result{}, nil
-}
-
-// buildDeployment constructs the Deployment object we want to exist.
-// It does NOT set owner references — that's done separately in Reconcile
-// so the separation is clear.
-func (r *AppDeploymentReconciler) buildDeployment(app *learnv1.AppDeployment) *appsv1.Deployment {
-	replicas := app.Spec.Replicas
-	labels := map[string]string{
-		"app":                          app.Name,
-		"app.kubernetes.io/managed-by": "appdeployment-controller",
-	}
-
-	return &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      app.Name,
-			Namespace: app.Namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  app.Name,
-							Image: app.Spec.Image,
-							Ports: []corev1.ContainerPort{
-								{ContainerPort: app.Spec.Port},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
 }
 
 // SetupWithManager registers this reconciler.
