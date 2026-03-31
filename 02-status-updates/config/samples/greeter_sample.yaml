@@ -1,0 +1,8 @@
+apiVersion: learn.example.com/v1
+kind: Greeter
+metadata:
+  name: my-greeter
+  namespace: default
+spec:
+  greeting: Hello
+  targetName: Kubernetes

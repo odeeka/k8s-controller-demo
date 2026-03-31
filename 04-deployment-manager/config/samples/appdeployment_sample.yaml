@@ -1,0 +1,9 @@
+apiVersion: learn.example.com/v1
+kind: AppDeployment
+metadata:
+  name: my-app
+  namespace: default
+spec:
+  image: nginx:1.25
+  replicas: 2
+  port: 80

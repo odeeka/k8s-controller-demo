@@ -1,0 +1,7 @@
+apiVersion: learn.example.com/v1
+kind: TrackedResource
+metadata:
+  name: my-tracked
+  namespace: default
+spec:
+  message: "external-db-record-id-42"

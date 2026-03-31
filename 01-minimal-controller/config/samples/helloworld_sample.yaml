@@ -1,0 +1,8 @@
+apiVersion: learn.example.com/v1
+kind: HelloWorld
+metadata:
+  name: my-first-controller
+  namespace: default
+spec:
+  # Change this value, save, and watch the controller log a new reconcile event.
+  name: World

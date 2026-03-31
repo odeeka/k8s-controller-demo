@@ -1,0 +1,13 @@
+apiVersion: learn.example.com/v1
+kind: ConfigSource
+metadata:
+  name: my-app-config
+  namespace: default
+spec:
+  # Optional: specify the ConfigMap name; otherwise the ConfigSource name is used.
+  configMapName: my-app-config
+  data:
+    key1: value1
+    key2: value2
+    database_host: postgres.default.svc.cluster.local
+    log_level: info

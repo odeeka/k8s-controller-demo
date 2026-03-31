@@ -1,0 +1,50 @@
+---
+# CustomResourceDefinition for HelloWorld
+#
+# This file registers the `HelloWorld` resource type with Kubernetes.
+# Once applied, you can create objects like:
+#
+#   apiVersion: learn.example.com/v1
+#   kind: HelloWorld
+#
+# The `metadata.name` must follow the pattern: <plural>.<group>
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: helloworlds.learn.example.com
+spec:
+  # The API group. Matches GroupVersion in groupversion_info.go.
+  group: learn.example.com
+  names:
+    kind: HelloWorld
+    listKind: HelloWorldList
+    plural: helloworlds
+    singular: helloworld
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true   # This version is served by the API server
+      storage: true  # This version is used for persistent storage
+      schema:
+        openAPIV3Schema:
+          description: HelloWorld is the Schema for the helloworlds API
+          type: object
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: HelloWorldSpec defines the desired state of HelloWorld
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  description: The name to greet
+                  type: string
+            status:
+              description: HelloWorldStatus defines the observed state of HelloWorld
+              type: object

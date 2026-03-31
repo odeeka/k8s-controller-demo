@@ -1,0 +1,65 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: greeters.learn.example.com
+spec:
+  group: learn.example.com
+  names:
+    kind: Greeter
+    listKind: GreeterList
+    plural: greeters
+    singular: greeter
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      # subresources.status enables the separate status endpoint.
+      # Without this, r.Status().Update() would silently fail to persist changes.
+      subresources:
+        status: {}
+      # additionalPrinterColumns customises `kubectl get greeters` output.
+      additionalPrinterColumns:
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Message
+          type: string
+          jsonPath: .status.message
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          description: Greeter is the Schema for the greeters API
+          type: object
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              type: object
+              required:
+                - greeting
+                - targetName
+              properties:
+                greeting:
+                  description: The greeting word (e.g. Hello, Hi)
+                  type: string
+                targetName:
+                  description: The name to greet
+                  type: string
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                message:
+                  type: string
+                lastUpdatedTime:
+                  type: string
+                  format: date-time
