@@ -27,6 +27,7 @@ controllerutil.SetControllerReference(&app, &deploy, r.Scheme)
 ```
 
 The reference contains:
+
 - The parent's UID (to uniquely identify it)
 - `controller: true` (so only one controller "owns" the resource)
 - `blockOwnerDeletion: true` (lets the parent block deletion until children are gone)
@@ -50,7 +51,7 @@ Rather than tracking what we created before, we simply re-compute the desired st
 
 ## Project Layout
 
-```
+```text
 04-deployment-manager/
 ├── main.go
 ├── api/v1/
@@ -75,6 +76,7 @@ go run .
 ```
 
 Watch the Deployment get created:
+
 ```bash
 kubectl get appdeployment my-app
 # NAME     REPLICAS   AVAILABLE   PHASE
@@ -85,6 +87,7 @@ kubectl get deployment my-app
 ```
 
 ### Test owner reference cleanup
+
 ```bash
 kubectl delete appdeployment my-app
 kubectl get deployment my-app
@@ -92,11 +95,79 @@ kubectl get deployment my-app
 ```
 
 ### Test spec changes
+
 ```bash
 kubectl patch appdeployment my-app --type=merge -p '{"spec":{"replicas":3}}'
 kubectl get deployment my-app
 # DESIRED 3 — Deployment was updated automatically
 ```
+
+## Run In-Cluster (Deployment)
+
+If you want this controller to run inside Kubernetes, use the manifests under `config/rbac/` and `config/manager/`.
+
+### 1. Build and push image
+
+From repository root (`k8s-controller-demo/`):
+
+```bash
+docker build -f 04-deployment-manager/Dockerfile -t <your-registry>/deployment-controller:latest .
+docker push <your-registry>/deployment-controller:latest
+```
+
+If you are currently in `04-deployment-manager/`, use parent directory (`..`) as build context:
+
+```bash
+docker build -f Dockerfile -t <your-registry>/deployment-controller:latest ..
+docker push <your-registry>/deployment-controller:latest
+```
+
+### 2. Set your image in the Deployment manifest
+
+Edit `config/manager/deployment.yaml` and replace:
+
+```text
+docker.io/your-user/appdeployment-controller:latest
+```
+
+with your pushed image.
+
+### 3. Install CRD + RBAC + controller Deployment
+
+```bash
+kubectl apply -f config/crd/
+kubectl apply -f config/rbac/
+kubectl apply -f config/manager/
+```
+
+### 4. Create a sample custom resource
+
+```bash
+kubectl apply -f config/samples/
+```
+
+### 5. Verify Deployment reconciliation
+
+```bash
+kubectl logs -n default deploy/appdeployment-controller -f
+kubectl get appdeployment my-app -o yaml
+kubectl get deployment my-app -o yaml
+```
+
+Check that:
+
+- `.status.availableReplicas` is updated on the `AppDeployment`
+- `.status.phase` transitions to `Available` when replicas are ready
+- Deployment image and replicas match `.spec`
+
+### 6. Trigger update and confirm sync
+
+```bash
+kubectl patch appdeployment my-app --type=merge -p '{"spec":{"replicas":3}}'
+kubectl get deployment my-app -o jsonpath='{.spec.replicas}{"\n"}'
+```
+
+The managed Deployment should be updated to 3 replicas.
 
 ---
 

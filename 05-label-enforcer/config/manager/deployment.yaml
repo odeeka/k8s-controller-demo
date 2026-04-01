@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: namespace-label-controller
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: namespace-label-controller
+  template:
+    metadata:
+      labels:
+        app: namespace-label-controller
+    spec:
+      serviceAccountName: namespace-label-controller
+      containers:
+        - name: manager
+          image: docker.io/ptibor84/namespace-label-controller:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

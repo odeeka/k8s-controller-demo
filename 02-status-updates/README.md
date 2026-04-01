@@ -21,7 +21,7 @@ This is the fundamental loop: **read spec → compute desired state → update s
 ### Status is for the controller, spec is for the user
 
 | Field | Written by | Meaning |
-|-------|-----------|---------|
+| - | - | - |
 | `.spec` | You (kubectl, GitOps) | What you *want* |
 | `.status` | The controller | What the controller *observed/did* |
 

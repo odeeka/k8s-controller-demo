@@ -9,6 +9,7 @@
 We introduce a `TrackedResource` custom resource that simulates a resource needing cleanup before deletion (e.g., an external registration, a lease, a database entry).
 
 The controller:
+
 1. Adds a **finalizer** to every new `TrackedResource`
 2. On deletion: detects the `DeletionTimestamp`, runs cleanup, then removes the finalizer
 3. After the finalizer is removed, Kubernetes completes the deletion
@@ -25,7 +26,7 @@ Finalizers are strings in `metadata.finalizers`. While any finalizer strings exi
 
 ### The deletion flow
 
-```
+```text
 User: kubectl delete trackedresource my-resource
          │
          ▼
@@ -63,7 +64,7 @@ if !resource.DeletionTimestamp.IsZero() {
 
 ## Project Layout
 
-```
+```text
 06-finalizers/
 ├── main.go
 ├── api/v1/
@@ -88,6 +89,7 @@ go run .
 ```
 
 Observe the finalizer being added:
+
 ```bash
 kubectl get trackedresource my-tracked -o yaml
 # metadata.finalizers:
@@ -95,6 +97,7 @@ kubectl get trackedresource my-tracked -o yaml
 ```
 
 Delete the resource and watch the logs:
+
 ```bash
 kubectl delete trackedresource my-tracked
 # Controller logs:
@@ -111,9 +114,71 @@ kubectl patch trackedresource my-tracked \
   --type=json -p '[{"op":"remove","path":"/metadata/finalizers"}]'
 ```
 
+## Run In-Cluster (Deployment)
+
+If you want this controller to run inside Kubernetes, use the manifests under `config/rbac/` and `config/manager/`.
+
+### 1. Build and push image
+
+From repository root (`k8s-controller-demo/`):
+
+```bash
+docker build -f 06-finalizers/Dockerfile -t <your-registry>/trackedresource-controller:latest .
+docker push <your-registry>/trackedresource-controller:latest
+```
+
+If you are currently in `06-finalizers/`, use parent directory (`..`) as build context:
+
+```bash
+docker build -f Dockerfile -t <your-registry>/trackedresource-controller:latest ..
+docker push <your-registry>/trackedresource-controller:latest
+```
+
+### 2. Set your image in the Deployment manifest
+
+Edit `config/manager/deployment.yaml` and replace:
+
+```text
+docker.io/your-user/trackedresource-controller:latest
+```
+
+with your pushed image.
+
+### 3. Install CRD + RBAC + controller Deployment
+
+```bash
+kubectl apply -f config/crd/
+kubectl apply -f config/rbac/
+kubectl apply -f config/manager/
+```
+
+### 4. Create a sample custom resource
+
+```bash
+kubectl apply -f config/samples/
+```
+
+### 5. Verify finalizer behavior
+
+```bash
+kubectl logs -n default deploy/trackedresource-controller -f
+kubectl get trackedresource my-tracked -o yaml
+```
+
+Check that `metadata.finalizers` contains `learn.example.com/cleanup`.
+
+### 6. Delete and observe cleanup flow
+
+```bash
+kubectl delete trackedresource my-tracked
+kubectl get trackedresources.learn.example.com
+```
+
+In logs you should see cleanup execution followed by finalizer removal.
+
 ---
 
-## Congratulations!
+## Congratulations
 
 You've completed the learning path. Here's what you now know:
 
@@ -125,6 +190,7 @@ You've completed the learning path. Here's what you now know:
 6. **Finalizers**: Register cleanup hooks that run before deletion.
 
 **Where to go next:**
+
 - Read the [controller-runtime docs](https://pkg.go.dev/sigs.k8s.io/controller-runtime)
 - Explore [kubebuilder](https://book.kubebuilder.io/) for a framework that scaffolds much of this
 - Look at real-world operators like [cert-manager](https://github.com/cert-manager/cert-manager) or [external-secrets](https://github.com/external-secrets/external-secrets)

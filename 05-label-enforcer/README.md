@@ -9,6 +9,7 @@
 This step has **no CRD**. The controller watches `Namespace` objects and ensures every user-created namespace has a `team` label. If a namespace is missing the label, the controller adds `team: unassigned` automatically.
 
 This demonstrates two important things:
+
 1. Controllers don't need custom resources — they can watch *any* Kubernetes resource.
 2. Using `r.Patch()` instead of `r.Update()` for partial changes.
 
@@ -52,7 +53,7 @@ Because this controller modifies Namespaces (cluster-scoped resources), it needs
 
 ## Project Layout
 
-```
+```text
 05-label-enforcer/
 ├── main.go
 ├── internal/controller/
@@ -76,6 +77,7 @@ go run .
 ```
 
 In another terminal, create a namespace without a `team` label:
+
 ```bash
 kubectl apply -f config/samples/test_namespace.yaml
 
@@ -86,11 +88,69 @@ kubectl get namespace learning-test --show-labels
 ```
 
 Try adding a namespace with a label already set:
+
 ```bash
 kubectl create namespace my-team-ns
 kubectl label namespace my-team-ns team=backend
 # Controller sees the label is already set and does nothing
 ```
+
+## Run In-Cluster (Deployment)
+
+If you want this controller to run inside Kubernetes, use the manifests under `config/rbac/` and `config/manager/`.
+
+### 1. Build and push image
+
+From repository root (`k8s-controller-demo/`):
+
+```bash
+docker build -f 05-label-enforcer/Dockerfile -t <your-registry>/namespace-label-controller:latest .
+docker push <your-registry>/namespace-label-controller:latest
+```
+
+If you are currently in `05-label-enforcer/`, use parent directory (`..`) as build context:
+
+```bash
+docker build -f Dockerfile -t <your-registry>/namespace-label-controller:latest ..
+docker push <your-registry>/namespace-label-controller:latest
+```
+
+### 2. Set your image in the Deployment manifest
+
+Edit `config/manager/deployment.yaml` and replace:
+
+```text
+docker.io/your-user/namespace-label-controller:latest
+```
+
+with your pushed image.
+
+### 3. Install RBAC + controller Deployment
+
+```bash
+kubectl apply -f config/rbac/
+kubectl apply -f config/manager/
+```
+
+### 4. Test label enforcement
+
+```bash
+kubectl apply -f config/samples/
+kubectl logs -n default deploy/namespace-label-controller -f
+kubectl get namespace learning-test --show-labels
+```
+
+Check that the `team=unassigned` label appears automatically.
+
+### 5. Test idempotent behavior
+
+```bash
+kubectl create namespace my-team-ns
+kubectl label namespace my-team-ns team=backend
+kubectl get namespace my-team-ns --show-labels
+```
+
+The controller should not overwrite an already set `team` label.
 
 ---
 

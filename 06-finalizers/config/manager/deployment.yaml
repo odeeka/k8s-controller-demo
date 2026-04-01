@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trackedresource-controller
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trackedresource-controller
+  template:
+    metadata:
+      labels:
+        app: trackedresource-controller
+    spec:
+      serviceAccountName: trackedresource-controller
+      containers:
+        - name: manager
+          image: docker.io/your-user/trackedresource-controller:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
