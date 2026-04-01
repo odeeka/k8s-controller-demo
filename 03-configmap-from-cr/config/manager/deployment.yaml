@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configsource-controller
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: configsource-controller
+  template:
+    metadata:
+      labels:
+        app: configsource-controller
+    spec:
+      serviceAccountName: configsource-controller
+      containers:
+        - name: manager
+          image: docker.io/ptibor84/configsource-controller:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

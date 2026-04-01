@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: greeter-controller-role
+rules:
+  - apiGroups: ["learn.example.com"]
+    resources: ["greeters"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["learn.example.com"]
+    resources: ["greeters/status"]
+    verbs: ["get", "update", "patch"]

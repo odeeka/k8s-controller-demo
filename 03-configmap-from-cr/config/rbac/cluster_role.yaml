@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: configsource-controller-role
+rules:
+  - apiGroups: ["learn.example.com"]
+    resources: ["configsources"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["learn.example.com"]
+    resources: ["configsources/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]

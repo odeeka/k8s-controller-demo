@@ -1,0 +1,8 @@
+---
+# A test namespace without a 'team' label.
+# Apply this and watch the label-enforcer controller add team=unassigned.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: learning-test
+  # No 'team' label — the controller will add one automatically.

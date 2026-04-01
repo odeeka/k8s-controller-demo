@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trackedresource-controller-role
+rules:
+  - apiGroups: ["learn.example.com"]
+    resources: ["trackedresources"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["learn.example.com"]
+    resources: ["trackedresources/status"]
+    verbs: ["get", "update", "patch"]

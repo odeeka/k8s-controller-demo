@@ -1,3 +1,22 @@
+# Go binaries and build output
+bin/
+*.exe
+*.test
+coverage.out
+
+# Go vendor directory (we use modules)
+vendor/
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
 # Local .terraform directories
 .terraform/
 

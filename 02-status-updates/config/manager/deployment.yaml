@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: greeter-controller
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: greeter-controller
+  template:
+    metadata:
+      labels:
+        app: greeter-controller
+    spec:
+      serviceAccountName: greeter-controller
+      containers:
+        - name: manager
+          image: docker.io/ptibor84/greeter-controller:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

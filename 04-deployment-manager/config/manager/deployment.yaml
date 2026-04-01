@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-controller
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment-controller
+  template:
+    metadata:
+      labels:
+        app: deployment-controller
+    spec:
+      serviceAccountName: deployment-controller
+      containers:
+        - name: manager
+          image: docker.io/ptibor84/deployment-controller:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

@@ -1,0 +1,20 @@
+---
+# ClusterRole grants the controller permission to read and update Namespaces.
+#
+# Note: Namespaces are cluster-scoped resources, so we need ClusterRole
+# (not a namespaced Role).
+#
+# In a real deployment, you would:
+# 1. Create a ServiceAccount for the controller
+# 2. Bind this ClusterRole to the ServiceAccount with a ClusterRoleBinding
+#
+# For local development with kind/minikube, your kubeconfig already has
+# cluster-admin permissions, so you don't need to apply this manually.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: label-enforcer-controller
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch", "patch", "update"]
