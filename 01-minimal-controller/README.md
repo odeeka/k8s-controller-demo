@@ -42,7 +42,7 @@ The framework watches the Kubernetes API for events (create, update, delete). Wh
 
 ## Project Layout
 
-```
+```text
 01-minimal-controller/
 ├── main.go                          # Manager setup
 ├── api/v1/
@@ -74,9 +74,76 @@ go run .
 ```
 
 You should see output like:
-```
+
+```text
 INFO  Reconciling HelloWorld  {"name": "World", "resource": "default/my-first-controller"}
 ```
+
+## Run In-Cluster (Deployment)
+
+If you want the controller to run *inside* Kubernetes instead of on your laptop, this step includes minimal RBAC + Deployment manifests under `config/rbac/` and `config/manager/`.
+
+### 1. Build and push image
+
+From the repository root (`k8s-controller-demo/`), build the image using the step-local Dockerfile:
+
+```bash
+docker build -f 01-minimal-controller/Dockerfile -t <your-registry>/helloworld-controller:latest .
+docker push <your-registry>/helloworld-controller:latest
+```
+
+If you are currently in `01-minimal-controller/`, use parent directory (`..`) as build context:
+
+```bash
+docker build -f Dockerfile -t <your-registry>/helloworld-controller:latest ..
+docker push <your-registry>/helloworld-controller:latest
+```
+
+### 2. Set your image in the Deployment manifest
+
+Edit:
+
+```text
+config/manager/deployment.yaml
+```
+
+and replace:
+
+```text
+ghcr.io/your-user/helloworld-controller:latest
+```
+
+with your pushed image.
+
+### 3. Install CRD + RBAC + controller Deployment
+
+```bash
+kubectl apply -f config/crd/
+kubectl apply -f config/rbac/
+kubectl apply -f config/manager/
+```
+
+### 4. Create a sample custom resource
+
+```bash
+kubectl apply -f config/samples/
+```
+
+### 5. Check controller logs
+
+```bash
+kubectl logs -n default deploy/helloworld-controller -f
+```
+
+You should see reconcile logs for `my-first-controller`.
+
+### 6. Trigger another reconcile
+
+```bash
+kubectl patch helloworld my-first-controller -n default --type=merge -p '{"spec":{"name":"ClusterRun"}}'
+```
+
+The Deployment pod should log a new reconciliation.
 
 ---
 
