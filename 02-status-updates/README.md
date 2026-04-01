@@ -53,7 +53,7 @@ This is a good habit. Without it, you'd generate spurious update events that re-
 
 ## Project Layout
 
-```
+```text
 02-status-updates/
 ├── main.go
 ├── api/v1/
@@ -85,11 +85,74 @@ kubectl get greeter my-greeter -o yaml
 ```
 
 Or use the printer columns:
+
 ```bash
 kubectl get greeters
 # NAME        PHASE   MESSAGE
 # my-greeter  Ready   Hello, Kubernetes!
 ```
+
+## Run In-Cluster (Deployment)
+
+If you want this controller to run inside Kubernetes, use the manifests under `config/rbac/` and `config/manager/`.
+
+### 1. Build and push image
+
+From repository root (`k8s-controller-demo/`):
+
+```bash
+docker build -f 02-status-updates/Dockerfile -t <your-registry>/greeter-controller:latest .
+docker push <your-registry>/greeter-controller:latest
+```
+
+If you are currently in `02-status-updates/`, use parent directory (`..`) as build context:
+
+```bash
+docker build -f Dockerfile -t <your-registry>/greeter-controller:latest ..
+docker push <your-registry>/greeter-controller:latest
+```
+
+### 2. Set your image in the Deployment manifest
+
+Edit `config/manager/deployment.yaml` and replace:
+
+```text
+docker.io/your-user/greeter-controller:latest
+```
+
+with your pushed image (Docker Hub or GHCR).
+
+### 3. Install CRD + RBAC + controller Deployment
+
+```bash
+kubectl apply -f config/crd/
+kubectl apply -f config/rbac/
+kubectl apply -f config/manager/
+```
+
+### 4. Create a sample custom resource
+
+```bash
+kubectl apply -f config/samples/
+```
+
+### 5. Verify controller and status updates
+
+```bash
+kubectl logs -n default deploy/greeter-controller -f
+kubectl get greeter my-greeter -o yaml
+```
+
+Check `.status.phase` and `.status.message` fields.
+
+### 6. Trigger another status update
+
+```bash
+kubectl patch greeter my-greeter --type=merge -p '{"spec":{"greeting":"Howdy","targetName":"Partner"}}'
+kubectl get greeter my-greeter -o jsonpath='{.status.message}'
+```
+
+The controller should reconcile again and write the new message to `.status`.
 
 ---
 
